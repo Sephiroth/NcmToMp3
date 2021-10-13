@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 //using Microsoft.Extensions.CommandLineUtils;
 using Newtonsoft.Json.Linq;
 
@@ -18,7 +19,7 @@ namespace NcmToMp3App
         public static void ProcessFile(string filePath, string savePath)
         {
             using FileStream fs = File.Open(filePath, FileMode.Open);
-            var lenBytes = new byte[4];
+            byte[] lenBytes = new byte[4];
             fs.Read(lenBytes);
             if (BitConverter.ToInt32(lenBytes) != 0x4e455443)
             {
@@ -35,7 +36,7 @@ namespace NcmToMp3App
 
             fs.Seek(2, SeekOrigin.Current);
             fs.Read(lenBytes);
-            var keyBytes = new byte[BitConverter.ToInt32(lenBytes)];
+            byte[] keyBytes = new byte[BitConverter.ToInt32(lenBytes)];
             fs.Read(keyBytes);
 
             for (int i = 0; i < keyBytes.Length; i++)
@@ -44,10 +45,9 @@ namespace NcmToMp3App
             }
 
             // 此处解析出来的值应该为减去字符串 "neteasecloudmusic" 长度之后的信息
-            var deKeyDataBytes = GetBytesByOffset(DecryptAex128Ecb(AesCoreKey, keyBytes), 17);
-
+            byte[] deKeyDataBytes = GetBytesByOffset(DecryptAex128Ecb(AesCoreKey, keyBytes), 17);
             fs.Read(lenBytes);
-            var modifyData = new byte[BitConverter.ToInt32(lenBytes)];
+            byte[] modifyData = new byte[BitConverter.ToInt32(lenBytes)];
             fs.Read(modifyData);
 
             for (int i = 0; i < modifyData.Length; i++)
@@ -56,13 +56,13 @@ namespace NcmToMp3App
             }
 
             // 从 Base64 字符串进行解码
-            var decryptBase64Bytes = Convert.FromBase64String(Encoding.UTF8.GetString(GetBytesByOffset(modifyData, 22)));
-            var decryptModifyData = DecryptAex128Ecb(AesModifyKey, decryptBase64Bytes);
+            byte[] decryptBase64Bytes = Convert.FromBase64String(Encoding.UTF8.GetString(GetBytesByOffset(modifyData, 22)));
+            byte[] decryptModifyData = DecryptAex128Ecb(AesModifyKey, decryptBase64Bytes);
             // 确定歌曲后缀名
-            var musicJson = JObject.Parse(Encoding.UTF8.GetString(GetBytesByOffset(decryptModifyData, 6)));
+            JObject musicJson = JObject.Parse(Encoding.UTF8.GetString(GetBytesByOffset(decryptModifyData, 6)));
 
             // 歌曲 JSON 数据读取
-            var extensions = musicJson.SelectToken("$.format").Value<string>();
+            string extensions = musicJson.SelectToken("$.format").Value<string>();
 
             // CRC 校验
             fs.Seek(4, SeekOrigin.Current);
@@ -77,22 +77,26 @@ namespace NcmToMp3App
                 fs.Read(imageBytes);
             }
 
-            var box = BuildKeyBox(deKeyDataBytes);
+            byte[] box = BuildKeyBox(deKeyDataBytes);
 
-            var n = 0x8000;
+            int n = 0x8000;
             // 输出歌曲文件
             string saveFile = Path.Combine(savePath, $"{Path.GetFileNameWithoutExtension(filePath)}.{extensions}");
             bool exist = File.Exists(saveFile);
             if (exist)
             {
+                if (MessageBox.Show($"{saveFile}已存在,是否覆盖", "提示", MessageBoxButtons.YesNo) == DialogResult.No)
+                {
+                    return;
+                }
                 File.Delete(saveFile);
             }
             using (var outputFile = File.Create(saveFile))
             {
                 while (true)
                 {
-                    var tb = new byte[n];
-                    var result = fs.Read(tb);
+                    byte[] tb = new byte[n];
+                    int result = fs.Read(tb);
                     if (result <= 0) break;
 
                     for (int i = 0; i < n; i++)
@@ -126,7 +130,6 @@ namespace NcmToMp3App
                     return result;
                 }
             }
-
             return null;
         }
 
@@ -153,12 +156,10 @@ namespace NcmToMp3App
                 {
                     keyOffset = 0;
                 }
-
                 box[i] = box[c];
                 box[c] = swap;
                 lastByte = c;
             }
-
             return box;
         }
 
@@ -173,12 +174,11 @@ namespace NcmToMp3App
         {
             if (length == 0)
             {
-                var resultBytes = new byte[srcBytes.Length - offset];
+                byte[] resultBytes = new byte[srcBytes.Length - offset];
                 Array.Copy(srcBytes, offset, resultBytes, 0, srcBytes.Length - offset);
                 return resultBytes;
             }
-
-            var resultBytes2 = new byte[length];
+            byte[] resultBytes2 = new byte[length];
             Array.Copy(srcBytes, 0, resultBytes2, 0, length);
             return resultBytes2;
         }
@@ -193,18 +193,15 @@ namespace NcmToMp3App
         {
             if (extensions != null && extensions.Length != 0)
             {
-                var files = new Dictionary<string, List<string>>();
-
+                Dictionary<string, List<string>> files = new Dictionary<string, List<string>>();
                 foreach (var extension in extensions)
                 {
-                    var result = new List<string>();
+                    List<string> result = new List<string>();
                     SearchFile(result, dirPath, extension);
                     files.Add(extension, result);
                 }
-
                 return files;
             }
-
             return null;
         }
 
@@ -224,8 +221,8 @@ namespace NcmToMp3App
             }
             catch (Exception)
             {
-
             }
         }
+
     }
 }
