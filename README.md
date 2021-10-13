@@ -1,16 +1,5 @@
 # ncmdump
-基于 .NET Core 编写的网易云音乐 NCM 格式转 MP3/FLAC 格式的程序.(Netease cloud music based on .NET Core NCM format to MP3/FLAC format program.)
+基于 .NET Core 编写的网易云音乐 NCM 格式转 MP3/FLAC 格式的程序，下载解压zip文件可直接运行。
 
-## 使用方法
-```
-单个文件转换: .\NCMToMp3.exe -f "<FILENAME>"  
-指定文件夹转换： .\NCMToMo3.exe -d "<DIR>"
-```
+不要问，问就是抄的(https://github.com/real-zony/ncmdump)我只是个搬运工，整合工具供大家使用，后面有空考虑整合一下QQ音乐的专有格式.
 
-## 支持的平台
-- Mac OS x64
-- Win10 x64
-- Linux x64
-
-## 二进制文件下载地址：  
-[https://github.com/GameBelial/ncmdump/releases](https://github.com/GameBelial/ncmdump/releases)
